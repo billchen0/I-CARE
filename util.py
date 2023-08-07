@@ -1,19 +1,10 @@
 import re
 from pathlib import Path
 import pandas as pd
+from scipy.io import loadmat
 
 
 ### I/O Helper Functions ###
-
-# Function to find all patient id in training set
-def list_patient_id(root_path: Path):
-    patient_list = []
-    patient_dirs = [p for p in root_path.iterdir() if re.fullmatch(r"\d{4}", p.name)]
-    for patient in patient_dirs:
-        patient_list.append(patient.name)
-
-    return patient_list
-
 
 # Function to load patient clinical data
 def load_clinical_data(root_path: Path, patient_id: str):
@@ -23,7 +14,16 @@ def load_clinical_data(root_path: Path, patient_id: str):
         data = f.read().split("\n")[:-1]
 
     return data
-    
+
+
+# Function to randomly load single patient EEG data
+def load_single_patient_eeg(root_path: Path, patient_id: str):
+    load_path = root_path / patient_id
+    # Find all EEG .mat files in patient directory
+    eeg_segment = list(load_path.glob("*EEG.mat"))[0]
+    eeg_signal = loadmat(eeg_segment)["val"]
+
+    return eeg_signal
 
 
 ### Compile Data Helper Functions ###
@@ -48,3 +48,23 @@ def compile_clinical_data(root_path: Path):
     df["ROSC"] = pd.to_numeric(df["ROSC"], errors="coerce")
 
     return df
+
+
+### Plotting Helper Functions ###
+
+
+### Others ###
+
+# Function to find all patient id in training set
+def list_patient_id(root_path: Path):
+    patient_list = []
+    patient_dirs = [p for p in root_path.iterdir() if re.fullmatch(r"\d{4}", p.name)]
+    for patient in patient_dirs:
+        patient_list.append(patient.name)
+
+    return patient_list
+
+
+# Functions to randomly sample a patient id
+def sample_patient(count):
+    pass
