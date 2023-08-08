@@ -1,7 +1,8 @@
 import re
 from pathlib import Path
 import pandas as pd
-from scipy.io import loadmat
+import numpy as np
+import wfdb
 
 
 ### I/O Helper Functions ###
@@ -14,16 +15,6 @@ def load_clinical_data(root_path: Path, patient_id: str):
         data = f.read().split("\n")[:-1]
 
     return data
-
-
-# Function to randomly load single patient EEG data
-def load_single_patient_eeg(root_path: Path, patient_id: str):
-    load_path = root_path / patient_id
-    # Find all EEG .mat files in patient directory
-    eeg_segment = list(load_path.glob("*EEG.mat"))[0]
-    eeg_signal = loadmat(eeg_segment)["val"]
-
-    return eeg_signal
 
 
 ### Compile Data Helper Functions ###
@@ -50,6 +41,39 @@ def compile_clinical_data(root_path: Path):
     return df
 
 
+def compile_signal_metadata(root_path: Path):
+    patients = list_patient_id(root_path)
+    # Store metadata dictionaries
+    all_eeg_metadata = []
+    for patient in patients:
+        p_path = root_path / patient
+        metadata_dict = {}
+        # Store duration data for each segment
+        durations = []
+        for segment in sorted(set([p.stem for p in p_path.glob("*EEG.mat")])):
+            seg_path = p_path / segment
+            eeg_metadata = wfdb.io.rdheader(seg_path)
+            # Calculate duration of segment using signal length and fs
+            duration = (eeg_metadata.sig_len / eeg_metadata.fs) / 60 #[minutes]
+            durations.append(duration)
+        
+        # Add metadata that is constant for different segments
+        metadata_dict["Patient"] = eeg_metadata.record_name[:4]
+        metadata_dict["Channels"] = eeg_metadata.sig_name
+        metadata_dict["Utility Frequency"] = int(eeg_metadata.comments[0].split(" ")[2])
+        metadata_dict["Fs"] = eeg_metadata.fs
+        metadata_dict["Hours Recorded"] = int(eeg_metadata.record_name[5:8])
+        metadata_dict["Avg Duration"] = sum(durations) / len(durations)
+        metadata_dict["Max Duration"] = max(durations)
+        metadata_dict["Min Duration"] = min(durations)
+        all_eeg_metadata.append(metadata_dict)
+    
+    # Convert list of dictionary to dataframe
+    metadata_df = pd.DataFrame(all_eeg_metadata)
+
+    return metadata_df
+
+
 ### Plotting Helper Functions ###
 
 
@@ -62,9 +86,4 @@ def list_patient_id(root_path: Path):
     for patient in patient_dirs:
         patient_list.append(patient.name)
 
-    return patient_list
-
-
-# Functions to randomly sample a patient id
-def sample_patient(count):
-    pass
+    return list(patient_list)
