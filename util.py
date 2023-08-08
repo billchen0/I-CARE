@@ -1,5 +1,6 @@
 import re
 from pathlib import Path
+import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import wfdb
@@ -60,9 +61,10 @@ def compile_signal_metadata(root_path: Path):
         # Add metadata that is constant for different segments
         metadata_dict["Patient"] = eeg_metadata.record_name[:4]
         metadata_dict["Channels"] = eeg_metadata.sig_name
+        metadata_dict["Channel Count"] = len(eeg_metadata.sig_name)
         metadata_dict["Utility Frequency"] = int(eeg_metadata.comments[0].split(" ")[2])
         metadata_dict["Fs"] = eeg_metadata.fs
-        metadata_dict["Hours Recorded"] = int(eeg_metadata.record_name[5:8])
+        metadata_dict["EEG Duration"] = int(eeg_metadata.record_name[5:8])
         metadata_dict["Avg Duration"] = sum(durations) / len(durations)
         metadata_dict["Max Duration"] = max(durations)
         metadata_dict["Min Duration"] = min(durations)
@@ -75,7 +77,27 @@ def compile_signal_metadata(root_path: Path):
 
 
 ### Plotting Helper Functions ###
+def render_mpl_table(data, col_width=3.0, row_height=0.625, font_size=14,
+                     header_color='#40466e', row_colors=['#f1f1f2', 'w'], edge_color='w',
+                     bbox=[0, 0, 1, 1], header_columns=0,
+                     ax=None, **kwargs):
+    if ax is None:
+        # Adjust the col_width to make the first column wider
+        size = (np.array(data.shape[::-1]) + np.array([2, 1])) * np.array([col_width, row_height])
+        fig, ax = plt.subplots(figsize=size)
+        ax.axis('off')
+    mpl_table = ax.table(cellText=data.reset_index().values, bbox=bbox, colLabels=[''] + list(data.columns), **kwargs)
+    mpl_table.auto_set_font_size(False)
+    mpl_table.set_fontsize(font_size)
 
+    for k, cell in mpl_table._cells.items():
+        cell.set_edgecolor(edge_color)
+        if k[0] == 0 or k[1] < header_columns:
+            cell.set_text_props(weight='bold', color='w')
+            cell.set_facecolor(header_color)
+        else:
+            cell.set_facecolor(row_colors[k[0] % len(row_colors)])
+    return ax.get_figure(), ax
 
 ### Others ###
 
