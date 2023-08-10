@@ -1,5 +1,28 @@
+from pathlib import Path
 from scipy.signal import butter, sosfiltfilt, resample
 import numpy as np
+import wfdb
+from util import list_patient_id
+
+
+def main(path_to_data: Path):
+    for p in list_patient_id(path_to_data):
+        eeg_path = path_to_data / p
+        for eeg_segment in sorted(set([seg.parent / seg.stem for seg in eeg_path.glob("*EEG.mat")])):
+            # Read in EEG segment, separating the signal and the channels
+            eeg_record = wfdb.io.rdrecord(eeg_segment)
+            eeg_signal = eeg_record.p_signal
+            eeg_channels = eeg_record.sig_name
+            fs = eeg_record.fs
+            # Remove excess channels and reorder the channels to a standardized order
+            reordered_signal = match_channels(eeg_signal, eeg_channels)
+            # Filter signal with 6th order butterworth bandpass filter
+            filtered_signal = butter_bandpass_filter(reordered_signal, fs=fs)
+            # Downsample the data to 100 Hz and perform z-score normalization
+            fs_ds = 100
+            processed_signal = downsample_normalize(filtered_signal, fs, fs_ds)
+            # Save the segment
+    
 
 def match_channels(signal, channels):
     # Define the standard order of the 19-channel configuration
