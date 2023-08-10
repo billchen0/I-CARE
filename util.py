@@ -17,6 +17,10 @@ def load_clinical_data(root_path: Path, patient_id: str):
 
     return data
 
+# Function to load patient EEG data
+def load_EEG_data():
+    pass
+
 
 ### Compile Data Helper Functions ###
 
