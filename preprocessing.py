@@ -22,7 +22,11 @@ def main(path_to_data: Path):
             fs_ds = 100
             processed_signal = downsample_normalize(filtered_signal, fs, fs_ds)
             # Save the segment
-    
+            save_path = Path(str(eeg_segment).replace("training", "processed"))
+            save_path.parent.mkdir(parents=True, exist_ok=True)
+            np.save(save_path, processed_signal)
+            print(f"{str(save_path)} saved.")
+
 
 def match_channels(signal, channels):
     # Define the standard order of the 19-channel configuration
@@ -57,3 +61,7 @@ def downsample_normalize(signal, fs_original, fs_downsample):
 
     return norm_signal
 
+
+if __name__ == "__main__":
+    root_path = Path("/media/hdd1/i-care/training")
+    main(root_path)
