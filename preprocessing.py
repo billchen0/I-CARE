@@ -1,4 +1,5 @@
 from scipy.signal import butter, sosfiltfilt, resample
+import numpy as np
 
 def match_channels(signal, channels):
     # Define the standard order of the 19-channel configuration
@@ -22,6 +23,14 @@ def butter_bandpass_filter(signal, fs, lowcut=0.5, highcut=30, order=6):
     return filtered_signal
 
 
-def downsample(signal, fs_original, fs_downsample):
-    num_samples_downsampled = int(fs_downsample * fs_downsample / fs_original)
-    downsampled_signal = resample(signal, num_samples_downsampled, axis=1)
+def downsample_normalize(signal, fs_original, fs_downsample):
+    num_samples_downsampled = int(signal.shape[0] * fs_downsample / fs_original)
+    downsampled_signal = resample(signal, num_samples_downsampled)
+    
+    # Z-score normalization
+    mean = np.mean(signal, axis=0)
+    std = np.std(signal, axis=0)
+    norm_signal = (downsampled_signal - mean) / std
+
+    return norm_signal
+
