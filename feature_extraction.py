@@ -26,7 +26,7 @@ def extract_features(eeg_seg: np.ndarray):
 
 def shannon_entropy(eeg_seg: np.ndarray, num_bins: int=100):
     entropies = []
-    for i, channel in enumerate(eeg_seg):
+    for channel in eeg_seg:
         # Split values into bin
         try:
             counts, bin_edges = np.histogram(channel, bins=num_bins)
@@ -41,3 +41,30 @@ def shannon_entropy(eeg_seg: np.ndarray, num_bins: int=100):
         entropies.append(entropy)
 
     return entropies
+
+
+def compute_bsr_multichannel(eeg_seg, alpha=0.01, treshold_factor=0.5):
+    bsr_values = []
+    for eeg_channels in eeg_seg: ...
+    
+
+def compute_bsr(eeg_channel, alpha=0.01, threshold_factor=0.5):
+    # Initialize values
+    mean = eeg_channel[0]
+    variance = 0
+    suppressed_samples = 0
+
+    for x_t in eeg_channel:
+        # Recrusive mean estimation
+        mean = (1-alpha) * mean + alpha * x_t
+        # Recursive variance estimation
+        variance = (1-alpha) * variance + alpha * (x_t-mean)**2
+        # Threshold to classify burst vs. suppression
+        if variance < threshold_factor * np.mean(variance):
+            suppressed_samples += 1
+    
+    # Compute burst suppression ratio
+    bsr = suppressed_samples / len(eeg_channel)
+
+    return bsr
+
