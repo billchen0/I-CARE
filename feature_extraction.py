@@ -17,9 +17,10 @@ def extract_features(eeg_seg: np.ndarray):
     avg_entropy = np.mean(shannon_entropy(eeg_seg))
     # Compute regularity
     # Compute burst supression ratio
+    avg_bsr = np.mean(compute_bsr_multichannel(eeg_seg))
     # Compute epileptiform discharge frequency
     # Combine into a feature vector for the segment
-    features = np.concatenate([avg_band_power, [ab_ratio, avg_entropy]])
+    features = np.concatenate([avg_band_power, [ab_ratio, avg_entropy, avg_bsr]])
 
     return features
 
@@ -43,9 +44,12 @@ def shannon_entropy(eeg_seg: np.ndarray, num_bins: int=100):
     return entropies
 
 
-def compute_bsr_multichannel(eeg_seg, alpha=0.01, treshold_factor=0.5):
+def compute_bsr_multichannel(eeg_seg, alpha=0.01, threshold_factor=0.5):
     bsr_values = []
-    for eeg_channels in eeg_seg: ...
+    for eeg_channel in eeg_seg:
+        bsr_values.append(compute_bsr(eeg_channel, alpha, threshold_factor))
+
+    return bsr_values
     
 
 def compute_bsr(eeg_channel, alpha=0.01, threshold_factor=0.5):
@@ -60,7 +64,7 @@ def compute_bsr(eeg_channel, alpha=0.01, threshold_factor=0.5):
         # Recursive variance estimation
         variance = (1-alpha) * variance + alpha * (x_t-mean)**2
         # Threshold to classify burst vs. suppression
-        if variance < threshold_factor * np.mean(variance):
+        if variance < threshold_factor:
             suppressed_samples += 1
     
     # Compute burst suppression ratio
