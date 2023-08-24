@@ -16,11 +16,12 @@ def extract_features(eeg_seg: np.ndarray):
     # Compute the Shannon entropy
     avg_entropy = np.mean(shannon_entropy(eeg_seg))
     # Compute regularity
+    avg_regularity = np.mean(compute_reg_multichannel(eeg_seg))
     # Compute burst supression ratio
     avg_bsr = np.mean(compute_bsr_multichannel(eeg_seg))
     # Compute epileptiform discharge frequency
     # Combine into a feature vector for the segment
-    features = np.concatenate([avg_band_power, [ab_ratio, avg_entropy, avg_bsr]])
+    features = np.concatenate([avg_band_power, [ab_ratio, avg_entropy, avg_bsr, avg_regularity]])
 
     return features
 
@@ -72,3 +73,28 @@ def compute_bsr(eeg_channel, alpha=0.01, threshold_factor=0.5):
 
     return bsr
 
+
+def compute_reg_multichannel(eeg_seg, sampling_rate=100):
+    reg_values = []
+    for eeg_channel in eeg_seg:
+        reg_values.append(compute_regularity(eeg_channel, sampling_rate))
+
+    return reg_values
+
+
+def compute_regularity(eeg_channel, sampling_rate=100):
+    # Square the EEG signal
+    squared_eeg = np.square(eeg_channel)
+    # Apply a moving-average filter with a window of 0.5s
+    window_length = int(0.5 * sampling_rate)
+    smoothed_eeg = np.convolve(squared_eeg, np.ones(window_length) / window_length, mode="valid")
+    # Sort the smoothed signal in descending order
+    sorted_eeg = np.sort(smoothed_eeg)[::-1]
+    # Calculate Regularity
+    N = len(sorted_eeg)
+    i = np.arange(1, N+1)
+    numerator = np.sum(np.square(i) * sorted_eeg)
+    denominator = (1/3) * N**2 * np.sum(sorted_eeg)
+    regularity = np.sqrt(numerator / denominator)
+
+    return regularity
