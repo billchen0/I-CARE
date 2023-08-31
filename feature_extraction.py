@@ -30,6 +30,7 @@ def main(root_path):
         save_path = root_path / "features" / f"{patient.name}" 
         save_path.mkdir(parents=True, exist_ok=True)
         np.save(save_path / "manual-features.npy", all_features)
+        print(f"Features saved for patient {patient}")
 
 
 
