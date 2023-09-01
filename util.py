@@ -18,6 +18,27 @@ def load_clinical_data(root_path: Path, patient_id: str):
     return data
 
 
+def get_segments_by_hour(root_path: Path, patient_id: str, start: int = 12, end: int=96):
+    load_path = root_path / patient_id
+    # Obtain all hourly segements for the participant
+    all_files = sorted(list(load_path.iterdir()))
+    # Get the hours for each element in the list
+    all_hours = [int(f.name.split("_")[2]) for f in all_files]
+    # Get the index by matching the desired start and end hours
+    if all_hours[0] > start:
+        start_index = 0
+    else:
+        start_index = all_hours.index(start)
+    if all_hours[-1] < end:
+        end_index = len(all_hours) - 1
+    else:
+        end_index = all_hours.index(end)
+    # Obtain the list of files within designated hour range using the index
+    selected_segments = all_files[start_index:end_index+1]
+    
+    return selected_segments
+    
+
 ### Compile Data Helper Functions ###
 
 def compile_clinical_data(root_path: Path):
