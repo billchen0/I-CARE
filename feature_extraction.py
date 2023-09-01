@@ -7,14 +7,14 @@ def main(root_path):
     # Loop through all the patients
     load_path = root_path / "processed"
     for patient in load_path.iterdir():
-        # Create a list to hold all extracted features for this patient
-        all_features_list = []
         # Loop through the hourly segments for the current patient
         for hr_seg in sorted(patient.iterdir()):
             # Read in the hourly segment
             eeg_data = np.load(hr_seg)
             total_samp = eeg_data.shape[0]
             window_samp = 5*60*100
+            # List to hold all 5-min features for this hourly segment
+            hr_seg_features_list = []
             # Loop through each segment with with a 5-min window and extract features
             for start in range(0, total_samp, window_samp):
                 end = start + window_samp
@@ -23,14 +23,15 @@ def main(root_path):
                     segment = eeg_data[start:end, :]
                 # Extract features from the segment
                 features = extract_features(segment)
-                all_features_list.append(features)
-        # Convert the list fo features to a Numpy array
-        all_features = np.array(all_features_list).T
-        # Save the features
-        save_path = root_path / "features" / f"{patient.name}" 
-        save_path.mkdir(parents=True, exist_ok=True)
-        np.save(save_path / "manual-features.npy", all_features)
-        print(f"Features saved for patient {patient}")
+                hr_seg_features_list.append(features)
+            # Convert the hourly features to a numpy array and store
+            hr_seg_features = np.array(hr_seg_features_list).T
+            # Save the features
+            save_path = root_path / "features" / f"{patient.name}"
+            filename = hr_seg.name.replace("EEG", "features")
+            save_path.mkdir(parents=True, exist_ok=True)
+            np.save(save_path / filename, hr_seg_features)
+        print(f"Features saved for patient {patient.name}")
 
 
 
