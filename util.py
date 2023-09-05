@@ -128,6 +128,16 @@ def list_patient_id(root_path: Path):
     return list(patient_list)
 
 
+# Convert CPC values to outcome labels 
+def cpc_to_label(cpc_value: int):
+    if 1 <= cpc_value <= 2:
+        label = 0
+    else:
+        label = 1
+
+    return label
+
+
 # Function to pad sequence to largest sequence length
 def pad_sequence(arr_list: List[np.array], pad_value=0):
     # Calculate max sequence length
