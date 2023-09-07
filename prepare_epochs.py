@@ -83,6 +83,9 @@ def main():
         # Remove features above 72 hours to index error.
         hours = [h for h in hours if h < 72]
         epoch_idx = segment_hours_into_epochs(hours)
+        # If there are not at least 4 6h epochs available, skip this patient. 
+        if len(list(filter(None, epoch_idx))) <= 4:
+            continue
 
         all_epoch_features = []
         for epoch in epoch_idx:
@@ -119,7 +122,6 @@ def main():
                 else:
                     filename = f"{i*6}_{i*6+6}_features.npy"
                 np.save(save_path / filename, concat_epoch)
-
 
 if __name__ == "__main__":
     main()
