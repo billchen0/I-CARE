@@ -1,5 +1,7 @@
 import re
+import bisect
 from pathlib import Path
+from typing import List
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
@@ -17,6 +19,20 @@ def load_clinical_data(root_path: Path, patient_id: str):
 
     return data
 
+
+def get_segments_by_hour(load_path: Path, start_hour: int, end_hour: int):
+    # Obtain all hourly segements for the participant
+    all_files = sorted(list(load_path.iterdir()))
+    # Get the hours for each element in the list
+    all_hours = [int(f.name.split("_")[2]) for f in all_files]
+    # Find the start and end indices
+    start_index = bisect.bisect_left(all_hours, start_hour)
+    end_index = bisect.bisect_right(all_hours, end_hour)
+    # Subset the files to find segments within determined index
+    selected = all_files[start_index:end_index]
+    
+    return selected
+    
 
 ### Compile Data Helper Functions ###
 
@@ -77,6 +93,7 @@ def compile_signal_metadata(root_path: Path):
 
 
 ### Plotting Helper Functions ###
+
 def render_mpl_table(data, col_width=3.0, row_height=0.625, font_size=14,
                      header_color='#40466e', row_colors=['#f1f1f2', 'w'], edge_color='w',
                      bbox=[0, 0, 1, 1], header_columns=0,
@@ -109,3 +126,30 @@ def list_patient_id(root_path: Path):
         patient_list.append(patient.name)
 
     return list(patient_list)
+
+
+# Convert CPC values to outcome labels 
+def cpc_to_label(cpc_value: int):
+    if 1 <= cpc_value <= 2:
+        label = 0
+    else:
+        label = 1
+
+    return label
+
+
+# Function to pad sequence to largest sequence length
+def pad_sequence(arr_list: List[np.array], pad_value=0):
+    # Calculate max sequence length
+    max_len = max(arr.shape[1] for arr in arr_list)
+    
+    padded_arr_list = []
+    for arr in arr_list:
+        # Calculate the number of positions to pad
+        padding_length = max_len - arr.shape[1]
+        # Create new array filled with NaN
+        padding_arr = np.full((arr.shape[0], padding_length), np.nan)
+        padded_array = np.concatenate([arr, padding_arr], axis=1)
+        padded_arr_list.append(padded_array)
+
+    return padded_arr_list
