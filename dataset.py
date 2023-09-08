@@ -27,6 +27,6 @@ class ManualFeatureDataset(Dataset):
             data.append(features)
         data = torch.tensor(data).float()
 
-        label = torch.tensor(self.labels_df.loc[patient_id].values[0])
+        label = torch.tensor(self.labels_df.loc[patient_id])
 
         return data, label
