@@ -8,10 +8,9 @@ from util import transform_to_binary_labels
 class ManualFeatureDataset(Dataset):
     def __init__(self, root_dir, labels_csv, patient_ids=None):
         self.root_dir = root_dir
-        self.labels_df = pd.read_csv(labels_csv, index_col=0)
-        self.labels_df.index = self.labels_df.index.astype(str).str.replace(".0", "").str.rjust(4, "0")
+        self.labels_df = pd.read_csv(labels_csv, dtype={"Patient": str}, index_col=0)["CPC"]
         self.labels_df = self.labels_df[self.labels_df.index.isin(patient_ids)]
-       #self.labels_df = self.labels_df.apply(lambda x: transform_to_binary_labels(x))
+        self.labels_df = self.labels_df.apply(lambda x: transform_to_binary_labels(x))
         self.patient_ids = self.labels_df.index.tolist() if patient_ids is None else patient_ids
 
     def __len__(self):
