@@ -156,7 +156,7 @@ def pad_sequence(arr_list: List[np.array], pad_value=0):
 
 
 # Function to transform label from 5 class to binary 
-def transform_to_binary_labels(self, label):
+def transform_to_binary_labels(label):
     if 1 <= label <= 2:
         return 0 # good outcome
     elif 3 <= label <= 5:
