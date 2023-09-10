@@ -41,7 +41,7 @@ class ManualFeatureDataModule(pl.LightningDataModule):
         self.labels_csv = labels_csv
         self.batch_size = batch_size
 
-    def setup(self, stage: str):
+    def setup(self, stage: str=None):
         # List all patient ids
         all_patient_ids = [dir_.name for dir_ in self.root_dir.iterdir()]
         train_ids, temp_ids = train_test_split(all_patient_ids, test_size=0.3, random_state=42)
