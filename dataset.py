@@ -12,25 +12,25 @@ class ManualFeatureDataset(Dataset):
         self.root_dir = root_dir
         self.labels_df = pd.read_csv(labels_csv, dtype={"Patient": str}, index_col=0)["CPC"]
         self.labels_df = self.labels_df[self.labels_df.index.isin(patient_ids)]
-        self.labels_df = self.labels_df.apply(lambda x: transform_to_binary_labels(x))
-        self.patient_ids = self.labels_df.index.tolist() if patient_ids is None else patient_ids
+        # Preapre the patient_ids list
+        self.patient_ids = self.labels_df.index.tolist()
+        self.data = []
+        self.labels = []
+
+        for patient_id in self.patient_ids:
+            patient_dir = self.root_dir / patient_id
+            patient_files = sorted([f for f in patient_dir.iterdir()])
+            for file in patient_files:
+                features = np.load(file)
+                self.data.append(features)
+                self.labels.append(transform_to_binary_labels(self.labels_df.loc[patient_id]))
 
     def __len__(self):
-        return len(self.patient_ids)
+        return len(self.data)
     
     def __getitem__(self, idx):
-        patient_id = self.patient_ids[idx]
-        patient_dir = self.root_dir / patient_id
-        patient_files = sorted([f for f in patient_dir.iterdir()])
-
-        data = []
-        for file in patient_files:
-            features = np.load(file)
-            data.append(features)
-        data = torch.tensor(data).float()
-
-        label = torch.tensor(self.labels_df.loc[patient_id])
-
+        data = torch.tensor(self.data[idx]).float()
+        label = torch.tensor(self.labels[idx])
         return data, label
     
 

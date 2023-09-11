@@ -1,5 +1,5 @@
 import torch.nn as nn
-
+import torch.nn.functional as F
 
 class BiLSTMClassifier(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, dropout, num_classes=2):
@@ -21,12 +21,11 @@ class BiLSTMClassifier(nn.Module):
         # Fully connected layer
         self.fc = nn.Linear(hidden_size*2, num_classes)
 
-        self.log_softmax = nn.LogSoftmax()
-
     def forward(self, x):
+        x = x.transpose(1, 2)
         out, _ = self.lstm(x)
         # Only take the last output for classification
         out = out[:, -1, :]
         out = self.fc(out)
 
-        return self.log_softmax(out, dim=1)
+        return F.log_softmax(out, dim=1)
