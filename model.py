@@ -1,9 +1,10 @@
 import torch
-import torchmetrics
 import lightning.pytorch as pl
-from sklearn.metrics import accuracy_score
 import torch.nn as nn
 import torch.nn.functional as F
+from torchmetrics import MetricCollection
+from torchmetrics.classification import (BinaryAUROC,
+    BinaryAccuracy, BinaryPrecision, BinaryRecall, BinaryF1Score)
 
 class BiLSTMClassifier(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, dropout, num_classes=2):
@@ -44,19 +45,13 @@ class BiLSTMClassifierModule(pl.LightningModule):
         self.test_step_outputs = []
         self.save_hyperparameters()
         # Initialize performance metrics
-        self.train_acc = torchmetrics.Accuracy(task="binary")
-        self.val_acc = torchmetrics.Accuracy(task="binary")
-        self.test_acc = torchmetrics.Accuracy(task="binary")
-
-        self.train_auc = torchmetrics.AUROC(task="binary")
-        self.val_auc = torchmetrics.AUROC(task="binary")
-        self.test_auc = torchmetrics.AUROC(task="binary")
-
-        self.train_f1 = torchmetrics.F1Score(task="binary")
-        self.val_f1 = torchmetrics.F1Score(task="binary")
-        self.test_f1 = torchmetrics.F1Score(task="binary")
-        
-        self.test_roc = torchmetrics.ROC(task="binary")
+        metrics = MetricCollection([BinaryAccuracy(),
+                                    BinaryAUROC(),
+                                    BinaryRecall(),
+                                    BinaryPrecision(),
+                                    BinaryF1Score()])
+        self.train_metrics = metrics.clone(prefix="train_")
+        self.val_metrics = metrics.clone(prefix="val_")
 
     def forward(self, x):
         return self.model(x)
@@ -67,13 +62,9 @@ class BiLSTMClassifierModule(pl.LightningModule):
         loss = F.nll_loss(logits, y)
         preds = torch.argmax(logits, dim=1)
         
-        self.train_acc(preds, y)
-        self.train_auc(preds, y)
-        self.train_f1(preds, y)
-        self.log("train_loss", loss, prog_bar=True, on_epoch=True)
-        self.log("train_acc", self.train_acc, prog_bar=True, on_epoch=True)
-        self.log("train_auc", self.train_auc, prog_bar=True)
-        self.log("train_f1", self.train_f1, prog_bar=True)
+        output = self.train_metrics(preds, y)
+        self.log_dict(output)
+        self.log("train_loss", loss)
         return loss
     
     def validation_step(self, batch, batch_idx):
@@ -82,13 +73,9 @@ class BiLSTMClassifierModule(pl.LightningModule):
         loss = F.nll_loss(logits, y)
         preds = torch.argmax(logits, dim=1)
 
-        self.val_acc(preds, y)
-        self.val_auc(preds, y)
-        self.val_f1(preds, y)
-        self.log("val_loss", loss, prog_bar=True)
-        self.log("val_acc", self.val_acc, prog_bar=True)
-        self.log("val_auc", self.val_auc, prog_bar=True)
-        self.log("val_f1", self.val_f1, prog_bar=True)
+        output = self.val_metrics(preds, y)
+        self.log_dict(output)
+        self.log("val_loss", loss)
         return loss
 
     # The test step will evaluate the performance for each 6h epoch
@@ -121,13 +108,8 @@ class BiLSTMClassifierModule(pl.LightningModule):
         for epoch_name in epoch_names:
             y = torch.tensor(aggregated_labels[epoch_name])
             preds = torch.tensor(aggregated_preds[epoch_name])
-            acc = accuracy_score(y, preds)
-            self.test_auc(preds, y)
-            self.test_f1(preds, y)
-            
-            self.log(f"test_acc_{epoch_name}", acc)
-            self.log(f"test_auc_{epoch_name}", self.test_auc)
-            self.log(f"test_f1_{epoch_name}", self.test_f1)
+            print(f"labels: {y}")
+            print(f"predictions: {preds}")
         # Free memory
         self.test_step_outputs.clear()
 
