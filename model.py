@@ -1,4 +1,5 @@
 import torch
+import wandb
 import lightning.pytorch as pl
 import torch.nn as nn
 import torch.nn.functional as F
@@ -53,6 +54,10 @@ class BiLSTMClassifierModule(pl.LightningModule):
         self.train_metrics = metrics.clone(prefix="train_")
         self.val_metrics = metrics.clone(prefix="val_")
 
+        # Setup per 6h evaluation on testing set
+        self.epoch_names = [str(x) for x in range(12, 72+1, 6)]
+        self.test_epoch_auc = []
+
     def forward(self, x):
         return self.model(x)
 
@@ -87,31 +92,38 @@ class BiLSTMClassifierModule(pl.LightningModule):
         preds = torch.argmax(logits, dim=1)
         self.test_step_outputs.append({
             "predictions": preds,
+            "logits": logits,
             "labels": y,
             "batch_idx": batch_idx
         })
         return loss
     
     def on_test_epoch_end(self):
-        # Create a list of epoch names based on data
-        epoch_names = [str(x) for x in range(12, 72+1, 6)]
         # Store aggregated labels and predictions
-        aggregated_labels = {name: [] for name in epoch_names}
-        aggregated_preds = {name: [] for name in epoch_names}
+        aggregated_labels = {name: [] for name in self.epoch_names}
+        aggregated_preds = {name: [] for name in self.epoch_names}
         # Aggregate labels and predictions based on batch_idx (6h epochs)
         for output in self.test_step_outputs:
             batch_idx = output["batch_idx"]
-            epoch_name = epoch_names[batch_idx]
+            epoch_name = self.epoch_names[batch_idx]
             aggregated_labels[epoch_name].extend(output["labels"].cpu().numpy())
             aggregated_preds[epoch_name].extend(output["predictions"].cpu().numpy())
         # Compute and log metrics for each 6h epoch
-        for epoch_name in epoch_names:
+        for epoch_name in self.epoch_names:
             y = torch.tensor(aggregated_labels[epoch_name])
             preds = torch.tensor(aggregated_preds[epoch_name])
-            print(f"labels: {y}")
-            print(f"predictions: {preds}")
+            auroc = BinaryAUROC()
+            test_auroc = auroc(preds, y)
+            self.test_epoch_auc.append(test_auroc)
         # Free memory
         self.test_step_outputs.clear()
+    
+    def on_test_end(self):
+        data = [[epoch, value] for (epoch, value) in zip(self.epoch_names, self.test_epoch_auc)]
+        table = wandb.Table(data=data, columns=["epoch", "test_auc"])
+        wandb.log({
+            "test_auc_per_epoch": wandb.plot.line(table, "epoch", "test_auc", title="Evaluation at 6h Epochs")
+        })
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)

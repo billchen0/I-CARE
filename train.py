@@ -15,7 +15,7 @@ def main():
     dm.setup()
     # Setup model module and training procedure
     model = BiLSTMClassifierModule(input_size=config.INPUT_SIZE,
-                                   hidden_size=256,
+                                   hidden_size=128,
                                    num_layers=10,
                                    dropout=0.3,
                                    learning_rate=config.LEARNING_RATE

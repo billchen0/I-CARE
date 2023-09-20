@@ -1,8 +1,8 @@
 # Training Hyperparameters
 BATCH_SIZE = 32
 INPUT_SIZE = 8
-LEARNING_RATE = 1e-5
-NUM_EPOCHS = 30
+LEARNING_RATE = 1e-4
+NUM_EPOCHS = 5
 
 # Logger
 PROJECT_NAME = "test-project"
