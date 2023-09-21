@@ -163,3 +163,21 @@ def transform_to_binary_labels(label):
         return 1 # bad outcome
     else:
         raise ValueError("Invalid label value")
+    
+
+# Function to load train, validation, and test ids
+def load_split_ids(path: Path):
+    train_file = path / "train_ids.txt"
+    val_file = path / "val_ids.txt"
+    test_file = path / "test_ids.txt"
+
+    with open(train_file, "r") as f:
+        train_ids = [line.strip() for line in f]
+
+    with open(val_file, "r") as f:
+        val_ids = [line.strip() for line in f]
+
+    with open(test_file, "r") as f:
+        test_ids = [line.strip() for line in f]
+
+    return train_ids, val_ids, test_ids
