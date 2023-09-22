@@ -11,10 +11,6 @@ sys.path.append("..")
 from util import load_split_ids
 
 
-path_to_split = Path("/home/bc299/icare/artifacts")
-train_ids, val_ids, test_ids = load_split_ids(path_to_split)
-
-
 class EEGSegmentDataset(Dataset):
     def __init__(self, data_dir, patient_ids):
         self.data_files = []
@@ -75,8 +71,8 @@ class EEGNetAutoencoder(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
         # Decoder
-        self.uppool1 = nn.Upsample(scale_factor=[1, 5], mode="nearest")
-        self.uppool2 = nn.Upsample(scale_factor=[1, 5], mode="nearest")
+        self.uppool1 = nn.Upsample(scale_factor=(1, 5), mode="nearest")
+        self.uppool2 = nn.Upsample(scale_factor=(1, 5), mode="nearest")
         self.de_separable = nn.Sequential(
             nn.ConvTranspose2d(filter_size * D, filter_size * D, kernel_size=[1, 16], padding='same', groups=filter_size * D, bias=False),
             nn.ConvTranspose2d(filter_size * D, filter_size * D, kernel_size=[1, 1], padding='same', groups=1, bias=False),
@@ -114,7 +110,7 @@ class EEGNetAutoencoder(nn.Module):
         return decoded
 
 
-class EEGNetAutoencoderModule(pl.LightningModule):
+class EEGNetAutoencoderModel(pl.LightningModule):
     def __init__(self, learning_rate=1e-5):
         super().__init__()
         
@@ -128,19 +124,29 @@ class EEGNetAutoencoderModule(pl.LightningModule):
         x = batch
         reconstructed = self(x)
         loss = F.mse_loss(reconstructed, x)
-        self.log("train_loss", loss)
+        self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
         x = batch
         reconstructed = self(x)
         loss = F.mse_loss(reconstructed, x)
-        self.log("val_loss", loss)
+        self.log("val_loss", loss, on_step=True, on_epoch=True, prog_bar=True)
     
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
         return optimizer
     
-    
 
-    
+path_to_split = Path("/home/bc299/icare/artifacts")
+train_ids, val_ids, test_ids = load_split_ids(path_to_split)
+
+data_module = EEGDataModule(train_ids, val_ids, path_to_split)
+model = EEGNetAutoencoderModel()
+
+trainer = pl.Trainer(max_epochs=2)
+trainer.fit(model, data_module)
+
+# Save model
+
+
