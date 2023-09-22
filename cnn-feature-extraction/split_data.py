@@ -10,9 +10,7 @@ seg_len = 10 #seconds
 data_per_seg = fs * seg_len
 
 # Get the list of patients to include in this program
-patients_path = Path("/home/bc299/icare/artifacts/include_patients.txt")
-with open(patients_path) as f:
-    include_patients = ast.literal_eval(f.readline())
+include_patients = ['0858', '0726', '0955', '0760', '0866', '0526', '0483', '0741', '0395', '0975', '0375', '0894', '0612', '0591', '0332', '0573', '0433', '0873', '0442', '0377', '0796', '0981', '0937', '0565', '0452', '0971', '0794', '0847', '0813', '0766', '0571', '0672', '0907', '0772', '0892', '0518', '0781', '0951', '0614', '0637', '0490', '0960', '0411', '0469', '0353', '0750', '0428']
 
 # Loop through the participants
 for patient in path_to_data.iterdir():

@@ -6,7 +6,8 @@ from util import list_patient_id
 
 
 def main(path_to_data: Path):
-    for p in list_patient_id(path_to_data):
+    for p in ["0858", "0726"]:
+    #for p in list_patient_id(path_to_data):
         eeg_path = path_to_data / p
         for eeg_segment in sorted(set([seg.parent / seg.stem for seg in eeg_path.glob("*EEG.mat")])):
             # Read in EEG segment, separating the signal and the channels

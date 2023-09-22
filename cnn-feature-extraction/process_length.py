@@ -22,19 +22,19 @@ def check_eeg_length(eeg_file):
 
 if __name__ == "__main__":
     print(f"Number of CPUs: {cpu_count()}")
-    processed_patients_path = Path("/media/hdd1/i-care/10s")
+    data_path = Path("/media/hdd1/i-care/10s")
     split_path = Path("/home/bc299/icare/artifacts")
-    processed_patients = [p.name for p in processed_patients_path.iterdir()]
+    processed_patients = [p.name for p in data_path.iterdir()]
     train_ids, val_ids, test_ids = load_split_ids(split_path)
     all_patients = train_ids + val_ids + test_ids
     
     process_patients = [p for p in all_patients if p not in processed_patients]
 
     for patient in process_patients:
-        patient_path = Path("/media/hdd1/i-care/processed") / patient
+        patient_path = data_path / patient
         patient_files = list(patient_path.iterdir())
         with Pool(cpu_count()) as p:
             discarded_results = p.map(check_eeg_length, patient_files)
         
         discarded_count = len([res for res in discarded_results if res is not None])
-        print(f"Processing completed for patient {patient.name}. {discarded_count} segments discarded.")
+        print(f"Processing completed for patient {patient_path.name}. {discarded_count} segments discarded.")
