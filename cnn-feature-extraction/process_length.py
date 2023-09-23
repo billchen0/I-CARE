@@ -22,15 +22,9 @@ def check_eeg_length(eeg_file):
 
 if __name__ == "__main__":
     print(f"Number of CPUs: {cpu_count()}")
-    data_path = Path("/media/hdd1/i-care/10s")
-    split_path = Path("/home/bc299/icare/artifacts")
-    processed_patients = [p.name for p in data_path.iterdir()]
-    train_ids, val_ids, test_ids = load_split_ids(split_path)
-    all_patients = train_ids + val_ids + test_ids
-    
-    process_patients = [p for p in all_patients if p not in processed_patients]
+    data_path = Path("/media/hdd1/i-care/ten-seconds")
 
-    for patient in process_patients:
+    for patient in data_path.iterdir():
         patient_path = data_path / patient
         patient_files = list(patient_path.iterdir())
         with Pool(cpu_count()) as p:

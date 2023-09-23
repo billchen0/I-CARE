@@ -1,16 +1,20 @@
 from pathlib import Path
-import ast
 import numpy as np
+import sys 
+sys.path.append("..")
+from util import load_split_ids
 
 
 path_to_data = Path("/media/hdd1/i-care/processed")
-save_path = Path("/media/hdd1/i-care/10s")
+save_path = Path("/media/hdd1/i-care/ten-seconds")
 fs = 100
 seg_len = 10 #seconds
 data_per_seg = fs * seg_len
 
 # Get the list of patients to include in this program
-include_patients = ['0858', '0726', '0955', '0760', '0866', '0526', '0483', '0741', '0395', '0975', '0375', '0894', '0612', '0591', '0332', '0573', '0433', '0873', '0442', '0377', '0796', '0981', '0937', '0565', '0452', '0971', '0794', '0847', '0813', '0766', '0571', '0672', '0907', '0772', '0892', '0518', '0781', '0951', '0614', '0637', '0490', '0960', '0411', '0469', '0353', '0750', '0428']
+split_path = Path("/home/bc299/icare/artifacts")
+train_ids, val_ids, test_ids = load_split_ids(split_path)
+include_patients = train_ids + val_ids + test_ids
 
 # Loop through the participants
 for patient in path_to_data.iterdir():
