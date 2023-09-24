@@ -9,7 +9,6 @@ from torch.utils.data import Dataset, DataLoader
 import numpy as np
 
 import wandb
-wandb.init(project="eeg-ae")
 
 import sys
 sys.path.append("..")
@@ -35,12 +34,13 @@ class EEGSegmentDataset(Dataset):
         segment = (segment - min_value) / (max_value - min_value)
         # Rearrange dimensions to [channels, height, width]
         reshaped_segment = segment.unsqueeze(0).permute(0, 2, 1)
+        reshaped_segment = torch.nan_to_num(reshaped_segment, nan=0.0)
 
         return reshaped_segment
     
 
 class EEGDataModule(pl.LightningDataModule):
-    def __init__(self, train_ids, val_ids, data_dir, batch_size=512):
+    def __init__(self, train_ids, val_ids, data_dir, batch_size=2048):
         super().__init__()
         self.train_ids = train_ids
         self.val_ids = val_ids
@@ -127,7 +127,7 @@ def compute_psnr(mse, max_val = 1.0):
 
 
 class EEGNetAutoencoderModel(pl.LightningModule):
-    def __init__(self, learning_rate=1e-3):
+    def __init__(self, learning_rate=1e-6):
         super().__init__()
         
         self.model = EEGNetAutoencoder()
@@ -141,8 +141,8 @@ class EEGNetAutoencoderModel(pl.LightningModule):
         reconstructed = self(x)
         loss = F.mse_loss(reconstructed, x)
         psnr = compute_psnr(loss)
-        self.log("train_loss", loss, on_epoch=True, prog_bar=True)
-        self.log("train_psnr", psnr, on_epoch=True, prog_bar=True)
+        self.log("train_loss", loss, on_epoch=True, on_step=True, prog_bar=True)
+        self.log("train_psnr", psnr, on_epoch=True, on_step=True, prog_bar=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -165,7 +165,7 @@ if __name__ == "__main__":
 
     dm = EEGDataModule(train_ids, val_ids, path_to_data)
     model = EEGNetAutoencoderModel()
-    logger = WandbLogger()
+    logger = WandbLogger(project="eeg-ae")
     early_stop_callback = EarlyStopping(
         monitor="val_loss",
         min_delta=0.00,
@@ -174,7 +174,7 @@ if __name__ == "__main__":
         mode="min"
     )
 
-    trainer = pl.Trainer(max_epochs=2, logger=logger, callbacks=[early_stop_callback])
+    trainer = pl.Trainer(max_epochs=100, logger=logger, callbacks=[early_stop_callback])
     trainer.fit(model, dm)
 
     # Save model
