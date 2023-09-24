@@ -1,10 +1,15 @@
 import lightning.pytorch as pl
+from lightning.pytorch.loggers import WandbLogger
+from lightning.pytorch.callbacks import EarlyStopping
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from pathlib import Path
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
+
+import wandb
+wandb.init(project="eeg-ae")
 
 import sys
 sys.path.append("..")
@@ -23,12 +28,19 @@ class EEGSegmentDataset(Dataset):
     
     def __getitem__(self, idx):
         segment_file = self.data_files[idx]
-        segment = np.load(segment_file)
-        return torch.tensor(segment, dtype=torch.float32)
+        segment = torch.tensor(np.load(segment_file), dtype=torch.float32)
+        # Perform Min-Max normalization
+        min_value = torch.min(segment)
+        max_value = torch.max(segment)
+        segment = (segment - min_value) / (max_value - min_value)
+        # Rearrange dimensions to [channels, height, width]
+        reshaped_segment = segment.unsqueeze(0).permute(0, 2, 1)
+
+        return reshaped_segment
     
 
 class EEGDataModule(pl.LightningDataModule):
-    def __init__(self, train_ids, val_ids, data_dir, batch_size=32):
+    def __init__(self, train_ids, val_ids, data_dir, batch_size=512):
         super().__init__()
         self.train_ids = train_ids
         self.val_ids = val_ids
@@ -56,7 +68,7 @@ class EEGNetAutoencoder(nn.Module):
             nn.BatchNorm2d(filter_size)
         )
         self.spatial = nn.Sequential(
-            nn.Conv2d(filter_size, filter_size * D, kernel_size=[8, 1], bias=False, groups=filter_size),
+            nn.Conv2d(filter_size, filter_size * D, kernel_size=[19, 1], bias=False, groups=filter_size),
             nn.BatchNorm2d(filter_size * D),
             nn.ELU(True)
         )
@@ -74,18 +86,18 @@ class EEGNetAutoencoder(nn.Module):
         self.uppool1 = nn.Upsample(scale_factor=(1, 5), mode="nearest")
         self.uppool2 = nn.Upsample(scale_factor=(1, 5), mode="nearest")
         self.de_separable = nn.Sequential(
-            nn.ConvTranspose2d(filter_size * D, filter_size * D, kernel_size=[1, 16], padding='same', groups=filter_size * D, bias=False),
-            nn.ConvTranspose2d(filter_size * D, filter_size * D, kernel_size=[1, 1], padding='same', groups=1, bias=False),
+            nn.ConvTranspose2d(filter_size * D, filter_size * D, kernel_size=[1, 16], groups=filter_size * D, bias=False),
+            nn.ConvTranspose2d(filter_size * D, filter_size * D, kernel_size=[1, 1], groups=1, bias=False),
             nn.BatchNorm2d(filter_size * D),
             nn.ELU(True),
         )
         self.de_spatial = nn.Sequential(
-            nn.ConvTranspose2d(filter_size * D, filter_size, kernel_size=[8, 1], bias=False, groups=filter_size),
+            nn.ConvTranspose2d(filter_size * D, filter_size, kernel_size=[19, 1], bias=False, groups=filter_size),
             nn.BatchNorm2d(filter_size),
             nn.ELU(True),
         )
         self.de_temporal = nn.Sequential(
-            nn.ConvTranspose2d(filter_size, 1, kernel_size=[1, receptive_field], stride=1, bias=False, padding='same'),
+            nn.ConvTranspose2d(filter_size, 1, kernel_size=[1, receptive_field], stride=1, bias=False),
             nn.BatchNorm2d(1),
         )
     
@@ -101,17 +113,21 @@ class EEGNetAutoencoder(nn.Module):
         
         # Decoder
         decoded = self.uppool1(encoded)
-        decoded = self.de_separable(decoded)
+        decoded = self.de_separable(decoded)[:, :, :, :200]
         decoded = self.dropout(decoded)
         decoded = self.uppool2(decoded)
         decoded = self.de_spatial(decoded)
-        decoded = self.de_temporal(decoded)
+        decoded = self.de_temporal(decoded)[:, :, :, :1000]
 
         return decoded
 
 
+def compute_psnr(mse, max_val = 1.0):
+    return 10 * torch.log10(max_val**2 / mse)
+
+
 class EEGNetAutoencoderModel(pl.LightningModule):
-    def __init__(self, learning_rate=1e-5):
+    def __init__(self, learning_rate=1e-3):
         super().__init__()
         
         self.model = EEGNetAutoencoder()
@@ -124,29 +140,44 @@ class EEGNetAutoencoderModel(pl.LightningModule):
         x = batch
         reconstructed = self(x)
         loss = F.mse_loss(reconstructed, x)
-        self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True)
+        psnr = compute_psnr(loss)
+        self.log("train_loss", loss, on_epoch=True, prog_bar=True)
+        self.log("train_psnr", psnr, on_epoch=True, prog_bar=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
         x = batch
         reconstructed = self(x)
         loss = F.mse_loss(reconstructed, x)
-        self.log("val_loss", loss, on_step=True, on_epoch=True, prog_bar=True)
+        psnr = compute_psnr(loss)
+        self.log("val_loss", loss, on_epoch=True, prog_bar=True)
+        self.log("val_psnr", psnr, on_epoch=True, prog_bar=True)
     
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
         return optimizer
     
 
-path_to_split = Path("/home/bc299/icare/artifacts")
-train_ids, val_ids, test_ids = load_split_ids(path_to_split)
+if __name__ == "__main__":
+    path_to_data = Path("/media/hdd1/i-care/ten-seconds")
+    path_to_split = Path("/home/bc299/icare/artifacts")
+    train_ids, val_ids, test_ids = load_split_ids(path_to_split)
 
-data_module = EEGDataModule(train_ids, val_ids, path_to_split)
-model = EEGNetAutoencoderModel()
+    dm = EEGDataModule(train_ids, val_ids, path_to_data)
+    model = EEGNetAutoencoderModel()
+    logger = WandbLogger()
+    early_stop_callback = EarlyStopping(
+        monitor="val_loss",
+        min_delta=0.00,
+        patience=3,
+        verbose=True,
+        mode="min"
+    )
 
-trainer = pl.Trainer(max_epochs=2)
-trainer.fit(model, data_module)
+    trainer = pl.Trainer(max_epochs=2, logger=logger, callbacks=[early_stop_callback])
+    trainer.fit(model, dm)
 
-# Save model
-
+    # Save model
+    torch.save(model.state_dict(), "eeg_ae_model.pth")
+    wandb.save("eeg_ae_model.pth")
 
