@@ -40,7 +40,7 @@ class EEGSegmentDataset(Dataset):
     
 
 class EEGDataModule(pl.LightningDataModule):
-    def __init__(self, train_ids, val_ids, data_dir, batch_size=2048):
+    def __init__(self, train_ids, val_ids, data_dir, batch_size=64):
         super().__init__()
         self.train_ids = train_ids
         self.val_ids = val_ids
@@ -52,14 +52,20 @@ class EEGDataModule(pl.LightningDataModule):
         self.val_dataset = EEGSegmentDataset(self.data_dir, self.val_ids)
 
     def train_dataloader(self):
-        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True)
+        return DataLoader(self.train_dataset, 
+                          batch_size=self.batch_size,
+                          num_workers=24, 
+                          shuffle=True)
 
     def val_dataloader(self):
-        return DataLoader(self.val_dataset, batch_size=self.batch_size)
+        return DataLoader(self.val_dataset, 
+                          batch_size=self.batch_size,
+                          num_workers=24
+                          )
     
 
 class EEGNetAutoencoder(nn.Module):
-    def __init__(self, receptive_field=64, filter_size=8, dropout=0.5, D=2):
+    def __init__(self, receptive_field=1920, filter_size=8, dropout=0.5, D=2):
         super().__init__()
 
         # Encoder
@@ -113,11 +119,11 @@ class EEGNetAutoencoder(nn.Module):
         
         # Decoder
         decoded = self.uppool1(encoded)
-        decoded = self.de_separable(decoded)[:, :, :, :200]
+        decoded = self.de_separable(decoded)[:, :, :, :6000]
         decoded = self.dropout(decoded)
         decoded = self.uppool2(decoded)
         decoded = self.de_spatial(decoded)
-        decoded = self.de_temporal(decoded)[:, :, :, :1000]
+        decoded = self.de_temporal(decoded)[:, :, :, :30000]
 
         return decoded
 
@@ -127,7 +133,7 @@ def compute_psnr(mse, max_val = 1.0):
 
 
 class EEGNetAutoencoderModel(pl.LightningModule):
-    def __init__(self, learning_rate=1e-6):
+    def __init__(self, learning_rate=1e-4):
         super().__init__()
         
         self.model = EEGNetAutoencoder()
@@ -159,7 +165,7 @@ class EEGNetAutoencoderModel(pl.LightningModule):
     
 
 if __name__ == "__main__":
-    path_to_data = Path("/media/hdd1/i-care/ten-seconds")
+    path_to_data = Path("/media/hdd1/i-care/five-minutes")
     path_to_split = Path("/home/bc299/icare/artifacts")
     train_ids, val_ids, test_ids = load_split_ids(path_to_split)
 
