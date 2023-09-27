@@ -1,10 +1,12 @@
 import torch 
 import pandas as pd
+from pathlib import Path
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
 import lightning.pytorch as pl
-from sklearn.model_selection import train_test_split
-from util import transform_to_binary_labels
+import sys 
+sys.path.append("/home/bc299/icare")
+from util import transform_to_binary_labels, load_split_ids
 
 
 class ManualFeatureDataset(Dataset):
@@ -68,14 +70,13 @@ class ManualFeatureDataModule(pl.LightningDataModule):
         self.batch_size = batch_size
 
     def setup(self, stage: str=None):
-        # List all patient ids
-        all_patient_ids = [dir_.name for dir_ in self.root_dir.iterdir()]
-        train_ids, temp_ids = train_test_split(all_patient_ids, test_size=0.3, random_state=42)
-        val_ids, test_ids = train_test_split(temp_ids, test_size=2/3, random_state=42)
+        # Get patient ids for train validation and test
+        split_path = Path("/home/bc299/icare/artifacts")
+        train_ids, val_ids, test_ids = load_split_ids(split_path)
 
         # Create datasets for each split based on patient ids
-        self.train_dataset = ManualFeatureDataset(self.root_dir, 
-                                                  self.labels_csv, 
+        self.train_dataset = ManualFeatureDataset(self.root_dir,
+                                                  self.labels_csv,
                                                   patient_ids=train_ids)
         self.val_dataset = ManualFeatureDataset(self.root_dir, 
                                                 self.labels_csv, 

@@ -1,11 +1,11 @@
 from pathlib import Path
 from sklearn.model_selection import train_test_split
 
-import config
+import classifier.config as config
 from lightning.pytorch import Trainer
 from lightning.pytorch.loggers import WandbLogger
-from dataset import ManualFeatureDataModule
-from model import BiLSTMClassifierModule
+from classifier.dataset import ManualFeatureDataModule
+from classifier.model import BiLSTMClassifierModule
 
 def main():
     root_dir = Path(config.DATA_DIR)
