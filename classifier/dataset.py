@@ -1,6 +1,7 @@
 import torch 
 import pandas as pd
 from pathlib import Path
+import multiprocessing
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
 import lightning.pytorch as pl
@@ -88,13 +89,16 @@ class ManualFeatureDataModule(pl.LightningDataModule):
 
     def train_dataloader(self):
         return DataLoader(self.train_dataset, 
-                          batch_size=self.batch_size, 
+                          batch_size=self.batch_size,
+                          num_workers=multiprocessing.cpu_count(),
                           shuffle=True)
 
     def val_dataloader(self):
         return DataLoader(self.val_dataset,
+                          num_workers=multiprocessing.cpu_count(),
                           batch_size=self.batch_size)
 
     def test_dataloader(self):
         return DataLoader(self.test_dataset,
+                          num_workers=multiprocessing.cpu_count(),
                           batch_size=len(self.test_dataset.patient_ids))
