@@ -137,4 +137,15 @@ class BiLSTMClassifierModule(pl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
-        return optimizer
+        scheduler = {
+            "scheduler": torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 
+                                                                    mode="min", 
+                                                                    factor=0.1, 
+                                                                    patience=5, 
+                                                                    verbose=True),
+            "monitor": "val_loss",
+            "interval": "epoch",
+            "frequency": 1
+        }
+        
+        return {"optimizer": optimizer, "lr_scheduler": scheduler}

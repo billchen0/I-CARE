@@ -20,7 +20,7 @@ def main():
                                    learning_rate=config.LEARNING_RATE
                                    )
     logger = WandbLogger(project=config.PROJECT_NAME, name=config.RUN_NAME)
-    early_stop_callback = EarlyStopping(monitor="val_loss", patience=10, verbose=True, mode="min")
+    early_stop_callback = EarlyStopping(monitor="val_loss", patience=20, verbose=True, mode="min")
     checkpoint_callback = ModelCheckpoint(monitor="val_loss", 
                                           dirpath="checkpoints", 
                                           filename=config.BEST_MODEL_NAME, 

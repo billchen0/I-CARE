@@ -1,7 +1,7 @@
 # Training Hyperparameters
 BATCH_SIZE = 128
 INPUT_SIZE = 14
-LEARNING_RATE = 1e-6
+LEARNING_RATE = 1e-4
 NUM_EPOCHS = 100
 
 # Logger
