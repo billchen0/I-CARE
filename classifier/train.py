@@ -14,11 +14,11 @@ def main():
     # Setup model module and training procedure
     model = BiLSTMClassifierModule(input_size=config.INPUT_SIZE,
                                    hidden_size=128,
-                                   num_layers=4,
-                                   dropout=0.3,
+                                   num_layers=10,
+                                   dropout=0.5,
                                    learning_rate=config.LEARNING_RATE
                                    )
-    logger = WandbLogger(project=config.PROJECT_NAME)
+    logger = WandbLogger(project=config.PROJECT_NAME, name=config.RUN_NAME)
     trainer = Trainer(max_epochs=config.NUM_EPOCHS, logger=logger)
     # Train and test model
     trainer.fit(model, dm)

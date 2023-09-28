@@ -2,7 +2,7 @@
 BATCH_SIZE = 32
 INPUT_SIZE = 14
 LEARNING_RATE = 1e-4
-NUM_EPOCHS = 5
+NUM_EPOCHS = 50
 
 # Logger
 PROJECT_NAME = "test-project"
