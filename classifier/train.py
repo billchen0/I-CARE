@@ -1,11 +1,9 @@
 from pathlib import Path
-from sklearn.model_selection import train_test_split
-
-import classifier.config as config
+import config as config
 from lightning.pytorch import Trainer
 from lightning.pytorch.loggers import WandbLogger
-from classifier.dataset import ManualFeatureDataModule
-from classifier.model import BiLSTMClassifierModule
+from dataset import ManualFeatureDataModule
+from model import BiLSTMClassifierModule
 
 def main():
     root_dir = Path(config.DATA_DIR)
@@ -16,7 +14,7 @@ def main():
     # Setup model module and training procedure
     model = BiLSTMClassifierModule(input_size=config.INPUT_SIZE,
                                    hidden_size=128,
-                                   num_layers=10,
+                                   num_layers=4,
                                    dropout=0.3,
                                    learning_rate=config.LEARNING_RATE
                                    )
