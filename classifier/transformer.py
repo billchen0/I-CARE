@@ -15,16 +15,19 @@ class TransformerClassifier(nn.Module):
         self.embedding_linear = nn.Sequential(
             nn.Linear(input_size, d_model),
             nn.ReLU(),
+            nn.Dropout(dropout)
         )
         self.embedding_conv = nn.Conv1d(d_model, d_model, kernel_size=5, padding=2)
         self.pe = nn.Parameter(torch.randn(1, d_model))
+        self.layer_norm = nn.LayerNorm(d_model)
         self.transformer = nn.Transformer(d_model, nhead, num_layers, dropout=dropout)
         self.fc = nn.Linear(d_model, num_classes)
     
     def forward(self, x):
-        x = self.embedding_linear(x)
+        x = self.embedding_linear(x.permute(0, 2, 1))
         x = self.embedding_conv(x.permute(0, 2, 1))
         x = x.permute(0, 2, 1) + self.pe
+        x = self.layer_norm(x)
         x = x.permute(1, 0, 2)
         out = self.transformer.encoder(x)
         out = out[-1, :, :]

@@ -12,7 +12,7 @@ import wandb
 def main():
     # Initialize wandb run
     run = wandb.init(project=config.PROJECT_NAME)
-    hyperparameters = f"{config.MODEL_NAME}_{config.FEATURES}_hidden_size={wandb.config.hidden_size}_num_layers={wandb.config.num_layers}_dropout={wandb.config.dropout}"
+    hyperparameters = f"{config.MODEL_NAME}_{config.FEATURES}"
     run.name = hyperparameters
     run.save()
 
@@ -21,22 +21,29 @@ def main():
     # Setup data module
     dm = ManualFeatureDataModule(root_dir, labels_csv, batch_size=config.BATCH_SIZE)
     dm.setup()
+    ### BiLSTM Model
     # Setup model with hyperparameter from WandB config
-    hidden_size = wandb.config.hidden_size
+    # hidden_size = wandb.config.hidden_size
+    # num_layers = wandb.config.num_layers
+    # dropout = wandb.config.dropout
+    # model = BiLSTMClassifierModule(input_size=config.INPUT_SIZE,
+    #                                hidden_size=hidden_size,
+    #                                num_layers=num_layers,
+    #                                dropout=dropout,
+    #                                learning_rate=config.LEARNING_RATE
+    #                                )
+    ### Transformer Model
+    d_model = wandb.config.d_model
     num_layers = wandb.config.num_layers
-    dropout = wandb.config.dropout
-    model = BiLSTMClassifierModule(input_size=config.INPUT_SIZE,
-                                   hidden_size=hidden_size,
-                                   num_layers=num_layers,
-                                   dropout=dropout,
-                                   learning_rate=config.LEARNING_RATE
-                                   )
-    # model = TransformerClassifierModule(input_size=config.INPUT_SIZE,
-    #                                     d_model=128,
-    #                                     nhead=8,
-    #                                     num_layers=2,
-    #                                     dropout=0.4,
-    #                                     learning_rate=config.LEARNING_RATE)
+    nhead = wandb.config.nhead
+    dropout=wandb.config.dropout
+    model = TransformerClassifierModule(input_size=config.INPUT_SIZE,
+                                        d_model=128,
+                                        nhead=8,
+                                        num_layers=2,
+                                        dropout=0.4,
+                                        learning_rate=config.LEARNING_RATE)
+    ### TCN Model
     # Setup logger and callbacks
     logger = WandbLogger(project=config.PROJECT_NAME)
     early_stop_callback = EarlyStopping(monitor="val_loss", patience=20, verbose=True, mode="min")
@@ -53,7 +60,7 @@ def main():
     trainer.test(model, dm)
 
     # Close the WandB run
-    wandb.finish()
+    # wandb.finish()
 
 
 if __name__ == "__main__":
