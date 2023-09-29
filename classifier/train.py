@@ -5,13 +5,14 @@ from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
 from dataset import ManualFeatureDataModule
 from model import BiLSTMClassifierModule
+from transformer import TransformerClassifierModule
 import wandb
 
 
 def main():
     # Initialize wandb run
     run = wandb.init(project=config.PROJECT_NAME)
-    hyperparameters = f"hidden_size={wandb.config.hidden_size}_num_layers={wandb.config.num_layers}_dropout={wandb.config.dropout}"
+    hyperparameters = f"{config.MODEL_NAME}_{config.FEATURES}_hidden_size={wandb.config.hidden_size}_num_layers={wandb.config.num_layers}_dropout={wandb.config.dropout}"
     run.name = hyperparameters
     run.save()
 
@@ -30,14 +31,21 @@ def main():
                                    dropout=dropout,
                                    learning_rate=config.LEARNING_RATE
                                    )
-    logger = WandbLogger(project=config.PROJECT_NAME, name=config.RUN_NAME)
+    # model = TransformerClassifierModule(input_size=config.INPUT_SIZE,
+    #                                     d_model=128,
+    #                                     nhead=8,
+    #                                     num_layers=2,
+    #                                     dropout=0.4,
+    #                                     learning_rate=config.LEARNING_RATE)
+    # Setup logger and callbacks
+    logger = WandbLogger(project=config.PROJECT_NAME)
     early_stop_callback = EarlyStopping(monitor="val_loss", patience=20, verbose=True, mode="min")
-    checkpoint_callback = ModelCheckpoint(monitor="val_loss", 
-                                          dirpath="checkpoints", 
-                                          filename=config.BEST_MODEL_NAME, 
+    checkpoint_callback = ModelCheckpoint(monitor="val_loss",
+                                          dirpath="checkpoints",
+                                          filename=config.BEST_MODEL_NAME,
                                           save_top_k=1, 
                                           mode="min")
-    trainer = Trainer(max_epochs=config.NUM_EPOCHS, 
+    trainer = Trainer(max_epochs=config.NUM_EPOCHS,
                       logger=logger,
                       callbacks=[early_stop_callback, checkpoint_callback])
     # Train and test model
