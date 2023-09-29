@@ -1,0 +1,15 @@
+name: grid-sweep
+method: grid
+metric:
+  goal: minimize
+  name: val_loss
+parameters:
+  hidden_size:
+    values: [64, 128, 256]
+  num_layers:
+    values: [2, 4, 6, 8, 10, 12, 14]
+  dropout:
+    values: [0.1, 0.2, 0.3, 0.4, 0.5]
+command:
+  - python
+  - /home/bc299/icare/classifier/train.py

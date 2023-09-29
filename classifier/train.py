@@ -5,18 +5,29 @@ from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
 from dataset import ManualFeatureDataModule
 from model import BiLSTMClassifierModule
+import wandb
+
 
 def main():
+    # Initialize wandb run
+    run = wandb.init(project=config.PROJECT_NAME)
+    hyperparameters = f"hidden_size={wandb.config.hidden_size}_num_layers={wandb.config.num_layers}_dropout={wandb.config.dropout}"
+    run.name = hyperparameters
+    run.save()
+
     root_dir = Path(config.DATA_DIR)
     labels_csv = Path(config.LABEL_DIR)
     # Setup data module
     dm = ManualFeatureDataModule(root_dir, labels_csv, batch_size=config.BATCH_SIZE)
     dm.setup()
-    # Setup model module and training procedure
+    # Setup model with hyperparameter from WandB config
+    hidden_size = wandb.config.hidden_size
+    num_layers = wandb.config.num_layers
+    dropout = wandb.config.dropout
     model = BiLSTMClassifierModule(input_size=config.INPUT_SIZE,
-                                   hidden_size=128,
-                                   num_layers=10,
-                                   dropout=0.5,
+                                   hidden_size=hidden_size,
+                                   num_layers=num_layers,
+                                   dropout=dropout,
                                    learning_rate=config.LEARNING_RATE
                                    )
     logger = WandbLogger(project=config.PROJECT_NAME, name=config.RUN_NAME)
@@ -32,6 +43,9 @@ def main():
     # Train and test model
     trainer.fit(model, dm)
     trainer.test(model, dm)
+
+    # Close the WandB run
+    wandb.finish()
 
 
 if __name__ == "__main__":
