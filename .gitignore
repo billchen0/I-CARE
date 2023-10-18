@@ -1,5 +1,4 @@
 wandb/
 test-project/
-*.pth
 __pycache__
 checkpoints
