@@ -1,6 +1,5 @@
 from pathlib import Path
 import neurokit2 as nk
-from sklearn.decomposition import PCA
 import numpy as np
 
 
