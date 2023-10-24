@@ -3,7 +3,7 @@ import neurokit2 as nk
 import numpy as np
 
 
-def main(root_path):
+def main(root_path: Path):
     # Loop through all the patients
     load_path = root_path / "processed"
     for patient in load_path.iterdir():
@@ -25,7 +25,7 @@ def main(root_path):
                 features = extract_features(segment)
                 hr_seg_features_list.append(features)
             # Convert the hourly features to a numpy array and store
-            hr_seg_features = np.array(hr_seg_features_list).T
+            hr_seg_features = np.array(hr_seg_features_list)
             # Save the features
             save_path = root_path / "features" / f"{patient.name}"
             filename = hr_seg.name.replace("EEG", "features")
@@ -39,27 +39,34 @@ def extract_features(eeg_seg: np.ndarray):
     # Change the dimensions to (channel, timestamps)
     eeg_seg = eeg_seg.T
     # Extract power band density
-    band_powers = nk.eeg_power(eeg_seg, 
-                               100, 
-                               frequency_band=["Delta", "Theta", "Alpha", "Beta"])
-    # Average power band across channels
-    avg_band_power = band_powers.mean(numeric_only=True).values
-    # Add in alpha-delta ratio as a feature
-    ab_ratio =  avg_band_power[2] / avg_band_power[0]
+    band_powers = compute_band_power(eeg_seg)
     # Compute the Shannon entropy
-    avg_entropy = np.mean(shannon_entropy(eeg_seg))
+    entropy = compute_shannon_entropy(eeg_seg)
     # Compute regularity
-    avg_regularity = np.mean(compute_reg_multichannel(eeg_seg))
+    regularity = compute_reg_multichannel(eeg_seg)
     # Compute burst supression ratio
-    avg_bsr = np.mean(compute_bsr_multichannel(eeg_seg))
+    bsr = compute_bsr_multichannel(eeg_seg)
     # Compute epileptiform discharge frequency
     # Combine into a feature vector for the segment
-    features = np.concatenate([avg_band_power, [ab_ratio, avg_entropy, avg_bsr, avg_regularity]])
+    features = np.concatenate([band_powers, entropy, bsr, regularity])
 
     return features
 
 
-def shannon_entropy(eeg_seg: np.ndarray, num_bins: int=100):
+def compute_band_power(eeg_seg: np.ndarray, fs: int=100):
+    band_powers = nk.eeg_power(eeg_seg,
+                               fs,
+                               frequency_band=["Delta", "Theta", "Alpha", "Beta"])
+    # Compute the alpha/delta ratio
+    band_powers["Alpha/Delta"] = band_powers["Alpha"] / band_powers["Delta"]
+    # Convert the dataframe into a 1d numpy array
+    band_powers = band_powers.drop(columns=["Channel"])
+    band_powers_arr = band_powers.to_numpy().reshape(-1)
+
+    return band_powers_arr
+    
+
+def compute_shannon_entropy(eeg_seg: np.ndarray, num_bins: int=100):
     entropies = []
     for channel in eeg_seg:
         # Split values into bin
