@@ -1,6 +1,6 @@
 name: transformer-grid-sweep
 method: grid
-metric: 
+metric:
   goal: minimize
   name: val_loss
 parameters:

@@ -1,5 +1,6 @@
 import torch
 import wandb
+import numpy as np
 import lightning.pytorch as pl
 import torch.nn as nn
 import torch.nn.functional as F
@@ -55,15 +56,16 @@ class TransformerClassifierModule(pl.LightningModule):
         # Setup per 6h evaluation on testing set
         self.epoch_names = [str(x) for x in range(12, 72+1, 6)]
         self.test_epoch_auc = []
+        self.test_pred_probs = []
 
     def forward(self, x):
         return self.model(x)
 
     def training_step(self, batch, batch_idx):
         x, y = batch
-        logits = self.model(x)
-        loss = F.nll_loss(logits, y)
-        preds = torch.argmax(logits, dim=1)
+        log_probs = self.model(x)
+        loss = F.nll_loss(log_probs, y)
+        preds = torch.argmax(log_probs, dim=1)
         
         output = self.train_metrics(preds, y)
         self.log_dict(output)
@@ -72,9 +74,9 @@ class TransformerClassifierModule(pl.LightningModule):
     
     def validation_step(self, batch, batch_idx):
         x, y = batch
-        logits = self(x)
-        loss = F.nll_loss(logits, y)
-        preds = torch.argmax(logits, dim=1)
+        log_probs = self(x)
+        loss = F.nll_loss(log_probs, y)
+        preds = torch.argmax(log_probs, dim=1)
 
         output = self.val_metrics(preds, y)
         self.log_dict(output)
@@ -85,14 +87,16 @@ class TransformerClassifierModule(pl.LightningModule):
     # assuming that the 6h epochs are in order and the batch size is 1.
     def test_step(self, batch, batch_idx):
         x, y = batch
-        logits = self(x)
-        loss = F.nll_loss(logits, y)
-        preds = torch.argmax(logits, dim=1)
+        log_probs = self(x)
+        loss = F.nll_loss(log_probs, y)
+        preds = torch.argmax(log_probs, dim=1)
+        # Extract the probabilities of poor outcome
+        probs = torch.exp(log_probs[:, 1])
         self.test_step_outputs.append({
             "predictions": preds,
-            "logits": logits,
             "labels": y,
-            "batch_idx": batch_idx
+            "batch_idx": batch_idx,
+            "probs": probs
         })
         return loss
     
@@ -100,25 +104,28 @@ class TransformerClassifierModule(pl.LightningModule):
         # Store aggregated labels and predictions
         aggregated_labels = {name: [] for name in self.epoch_names}
         aggregated_preds = {name: [] for name in self.epoch_names}
-        aggregated_logits = {name: [] for name in self.epoch_names}
+        aggregated_probs = {name: [] for name in self.epoch_names}
         # Aggregate labels and predictions based on batch_idx (6h epochs)
         for output in self.test_step_outputs:
             batch_idx = output["batch_idx"]
             epoch_name = self.epoch_names[batch_idx]
             aggregated_labels[epoch_name].extend(output["labels"].cpu().numpy())
             aggregated_preds[epoch_name].extend(output["predictions"].cpu().numpy())
-            aggregated_logits[epoch_name].extend(output["logits"][:, 1].cpu().numpy())
+            aggregated_probs[epoch_name].extend(output["probs"].cpu().numpy())
+            # Average the probabilities for the current epoch and store in attribute
+            mean_prob = np.mean(aggregated_probs[epoch_name])
+            self.test_pred_probs.append(mean_prob)
         # Compute and log metrics for each 6h epoch
         for epoch_name in self.epoch_names:
             y = torch.tensor(aggregated_labels[epoch_name])
             preds = torch.tensor(aggregated_preds[epoch_name])
-            logits = torch.tensor(aggregated_logits[epoch_name])
+            probs = torch.tensor(aggregated_probs[epoch_name])
             # Compute and save AUROC
             auroc = BinaryAUROC()
             test_auroc = auroc(preds, y)
             self.test_epoch_auc.append(test_auroc)
             # Compute and save ROC curves
-            fpr, tpr, thresholds = roc_curve(y, logits, pos_label=1)
+            fpr, tpr, thresholds = roc_curve(y, probs, pos_label=1)
             table_data = list(zip(fpr, tpr, thresholds))
             table = wandb.Table(data=table_data, columns=["TPR", "FPR", "Thresholds"])
             wandb.log({f"ROC_{epoch_name}": table})
@@ -126,10 +133,20 @@ class TransformerClassifierModule(pl.LightningModule):
         self.test_step_outputs.clear()
     
     def on_test_end(self):
+        # Plot the AUROC for each epoch
         data = [[epoch, value] for (epoch, value) in zip(self.epoch_names, self.test_epoch_auc)]
         table = wandb.Table(data=data, columns=["epoch", "test_auc"])
         wandb.log({
             "test_auc_per_epoch": wandb.plot.line(table, "epoch", "test_auc", title="AUROC at 6h Epochs")
+        })
+        # Plot the predicted probability for each epoch
+        pred_probs = [[epoch, prob] for epoch, prob in zip(self.epoch_names, self.test_pred_probs)]
+        table_probs = wandb.Table(data=pred_probs, columns=["epoch", "predicted_probability"])
+        wandb.log({
+            "predicted_prob_per_epoch": wandb.plot.line(table_probs, 
+                                                        "epoch", 
+                                                        "predicted_probability", 
+                                                        title="Predicted Probability at 6h Epochs")
         })
 
     def configure_optimizers(self):

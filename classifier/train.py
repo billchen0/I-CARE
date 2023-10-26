@@ -38,10 +38,10 @@ def main():
     nhead = wandb.config.nhead
     dropout=wandb.config.dropout
     model = TransformerClassifierModule(input_size=config.INPUT_SIZE,
-                                        d_model=128,
-                                        nhead=8,
-                                        num_layers=2,
-                                        dropout=0.4,
+                                        d_model=d_model,
+                                        nhead=nhead,
+                                        num_layers=num_layers,
+                                        dropout=dropout,
                                         learning_rate=config.LEARNING_RATE)
     ### TCN Model
     # Setup logger and callbacks
