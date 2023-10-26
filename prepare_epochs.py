@@ -7,7 +7,7 @@ def get_unique_hour_files(path):
     seen_hours = set()
     unique_hour_files = []
     for file in all_files:
-        hour = file.stem.split("_")[2]
+        hour = file.stem.split("_")[1]
         if hour not in seen_hours:
             unique_hour_files.append(file)
             seen_hours.add(hour)
@@ -44,14 +44,18 @@ def segment_hours_into_epochs(hour_list):
 
 def combine_arrays(arr_list):
     # Initialize the result array with nan values
-    combined_arr = np.full((8, 72), np.nan)
+    combined_arr = np.full((296, 72), np.nan)
     # Calculate the position to start inserting arrays
     start_col = 72 - (len(arr_list) * 12)
     
     for arr in arr_list:
+        if arr.shape[0] < 296:
+            padding_rows = 296 - arr.shape[0]
+            arr = np.vstack([arr, np.full((padding_rows, arr.shape[1]), np.nan)])
+            
         if arr.shape[1] < 12:
             padding_cols = 12 - arr.shape[1]
-            arr = np.hstack([arr, np.full((8, padding_cols), np.nan)])
+            arr = np.hstack([arr, np.full((296, padding_cols), np.nan)])
         
         # Insert into the combined array
         combined_arr[:, start_col:start_col+12] = arr
@@ -76,15 +80,16 @@ def find_nearrest_valid(array_list, index, position):
 
 
 def main():
-    path_to_data = Path("/media/nvme1/icare-data/features")
+    path_to_data = Path("/media/hdd1/i-care/combined-features")
     for patient in path_to_data.iterdir():
         files = get_unique_hour_files(patient)
-        hours = [int(f.stem.split("_")[2]) for f in files]
+        hours = [int(f.stem.split("_")[1]) for f in files]
         # Remove features above 72 hours to index error.
         hours = [h for h in hours if h < 72]
         epoch_idx = segment_hours_into_epochs(hours)
         # If there are not at least 4 6h epochs available, skip this patient. 
         if len(list(filter(None, epoch_idx))) <= 4:
+            print(patient.name)
             continue
 
         all_epoch_features = []
@@ -99,7 +104,7 @@ def main():
                 all_epoch_features.append(combined_features)
             # If the current epoch doesn't have any data, append an empty array
             else:
-                all_epoch_features.append(np.full((8, 72), np.nan))
+                all_epoch_features.append(np.full((296, 72), np.nan))
         
         for i, epoch in enumerate(all_epoch_features):
             nan_positions = np.argwhere(np.isnan(epoch))
@@ -115,7 +120,7 @@ def main():
                 # Concatenate the average array with the current array
                 concat_epoch = np.hstack((avg_previous_epochs, epoch))
                 # Save the combined epochs to designated path
-                save_path = Path(f"/media/nvme1/icare-data/6h-features/{patient.name}")
+                save_path = Path(f"/media/hdd1/i-care/6h-combined/{patient.name}")
                 save_path.mkdir(parents=True, exist_ok=True)
                 if i == 1:
                     filename = f"0{i*6}_{i*6+6}_features.npy"
