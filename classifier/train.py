@@ -10,10 +10,17 @@ import wandb
 
 
 def main():
-    # Initialize wandb rusn
+    # Load WandB config and initialize run
+    # d_model = wandb.config.d_model
+    # num_layers = wandb.config.num_layers
+    # nhead = wandb.config.nhead
+    # dropout=wandb.config.dropout
     run = wandb.init(project=config.PROJECT_NAME)
-    hyperparameters = f"{config.MODEL_NAME}_{config.FEATURES}"
-    run.name = hyperparameters
+    hidden_size = wandb.config.hidden_size
+    num_layers = wandb.config.num_layers
+    dropout = wandb.config.dropout
+    # * Change run name to current sweeped hyperparams
+    run.name = f"{config.MODEL_NAME}_{config.FEATURES}_{hidden_size}_{num_layers}_{dropout}"
     run.save()
 
     root_dir = Path(config.DATA_DIR)
@@ -22,9 +29,6 @@ def main():
     dm = ManualFeatureDataModule(root_dir, labels_csv, batch_size=config.BATCH_SIZE)
     dm.setup()
     ### BiLSTM Model
-    hidden_size = wandb.config.hidden_size
-    num_layers = wandb.config.num_layers
-    dropout = wandb.config.dropout
     model = BiLSTMClassifierModule(input_size=config.INPUT_SIZE,
                                    hidden_size=hidden_size,
                                    num_layers=num_layers,
@@ -32,10 +36,6 @@ def main():
                                    learning_rate=config.LEARNING_RATE
                                    )
     ### Transformer Model
-    # d_model = wandb.config.d_model
-    # num_layers = wandb.config.num_layers
-    # nhead = wandb.config.nhead
-    # dropout=wandb.config.dropout
     # model = TransformerClassifierModule(input_size=config.INPUT_SIZE,
     #                                     d_model=d_model,
     #                                     nhead=nhead,
@@ -57,9 +57,6 @@ def main():
     # Train and test model
     trainer.fit(model, dm)
     trainer.test(model, dm)
-
-    # Close the WandB run
-    # wandb.finish()
 
 
 if __name__ == "__main__":
