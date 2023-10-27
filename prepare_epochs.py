@@ -1,10 +1,11 @@
 from pathlib import Path
 import numpy as np
 
-NUM_FEATURES = 152
-HOUR_INDEX = 2
-RAW_FEATURE_PATH = Path("/media/hdd1/i-care/features")
-SAVE_PATH_ROOT = Path("/media/hdd1/i-care/6h-manual")
+NUM_FEATURES = 144
+HOUR_INDEX = 1
+RAW_FEATURE_PATH = Path("/media/hdd1/i-care/agg-ae-features")
+SAVE_PATH_ROOT = Path("/media/hdd1/i-care/6h-ae")
+TRNASPOSE = True
 
 
 def get_unique_hour_files(path):
@@ -104,6 +105,8 @@ def main():
                 features = []
                 for feat_file in feature_files:
                     feat = np.load(feat_file)
+                    if TRNASPOSE:
+                        feat = feat.T
                     features.append(feat)
                 combined_features = combine_arrays(features)
                 all_epoch_features.append(combined_features)
