@@ -12,15 +12,15 @@ import wandb
 def main():
     # Load WandB config and initialize run
     run = wandb.init(project=config.PROJECT_NAME)
-    d_model = wandb.config.d_model
-    num_layers = wandb.config.num_layers
-    nhead = wandb.config.nhead
-    dropout=wandb.config.dropout
-    # hidden_size = wandb.config.hidden_size
+    # d_model = wandb.config.d_model
     # num_layers = wandb.config.num_layers
-    # dropout = wandb.config.dropout
+    # nhead = wandb.config.nhead
+    # dropout=wandb.config.dropout
+    hidden_size = wandb.config.hidden_size
+    num_layers = wandb.config.num_layers
+    dropout = wandb.config.dropout
     # * Change run name to current sweeped hyperparams
-    run.name = f"{config.MODEL_NAME}_{config.FEATURES}_{d_model}_{num_layers}__{nhead}_{dropout}"
+    run.name = f"{config.MODEL_NAME}_{config.FEATURES}_{hidden_size}_{num_layers}_{dropout}"
     run.save()
 
     root_dir = Path(config.DATA_DIR)
@@ -29,19 +29,19 @@ def main():
     dm = ManualFeatureDataModule(root_dir, labels_csv, batch_size=config.BATCH_SIZE)
     dm.setup()
     ### BiLSTM Model
-    # model = BiLSTMClassifierModule(input_size=config.INPUT_SIZE,
-    #                                hidden_size=hidden_size,
-    #                                num_layers=num_layers,
-    #                                dropout=dropout,
-    #                                learning_rate=config.LEARNING_RATE
-    #                                )
+    model = BiLSTMClassifierModule(input_size=config.INPUT_SIZE,
+                                   hidden_size=hidden_size,
+                                   num_layers=num_layers,
+                                   dropout=dropout,
+                                   learning_rate=config.LEARNING_RATE
+                                   )
     ### Transformer Model
-    model = TransformerClassifierModule(input_size=config.INPUT_SIZE,
-                                        d_model=d_model,
-                                        nhead=nhead,
-                                        num_layers=num_layers,
-                                        dropout=dropout,
-                                        learning_rate=config.LEARNING_RATE)
+    # model = TransformerClassifierModule(input_size=config.INPUT_SIZE,
+    #                                     d_model=d_model,
+    #                                     nhead=nhead,
+    #                                     num_layers=num_layers,
+    #                                     dropout=dropout,
+    #                                     learning_rate=config.LEARNING_RATE)
     ### TODO: TCN Model
     # Setup logger and callbacks
     logger = WandbLogger(project=config.PROJECT_NAME)

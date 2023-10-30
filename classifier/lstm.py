@@ -58,6 +58,8 @@ class BiLSTMClassifierModule(pl.LightningModule):
         # Setup per 6h evaluation on testing set
         self.epoch_names = [str(x) for x in range(12, 72+1, 6)]
         self.test_epoch_auc = []
+        self.test_epoch_acc = []
+        self.test_epoch_f1 = []
 
     def forward(self, x):
         return self.model(x)
@@ -117,9 +119,15 @@ class BiLSTMClassifierModule(pl.LightningModule):
             preds = torch.tensor(aggregated_preds[epoch_name])
             logits = torch.tensor(aggregated_logits[epoch_name])
             # Compute and save AUROC
+            accuracy = BinaryAccuracy()
+            f1score = BinaryF1Score()
             auroc = BinaryAUROC()
             test_auroc = auroc(preds, y)
+            test_accuracy = accuracy(preds, y)
+            test_f1score = f1score(preds, y)
             self.test_epoch_auc.append(test_auroc)
+            self.test_epoch_acc.append(test_accuracy)
+            self.test_epoch_f1.append(test_f1score)
             # Compute and save ROC curves
             fpr, tpr, thresholds = roc_curve(y, logits, pos_label=1)
             table_data = list(zip(fpr, tpr, thresholds))
@@ -129,10 +137,26 @@ class BiLSTMClassifierModule(pl.LightningModule):
         self.test_step_outputs.clear()
     
     def on_test_end(self):
-        data = [[epoch, value] for (epoch, value) in zip(self.epoch_names, self.test_epoch_auc)]
-        table = wandb.Table(data=data, columns=["epoch", "test_auc"])
+        # Plot the evaluation metrics for each epoch
+        auroc = [[epoch, value] for (epoch, value) in zip(self.epoch_names, self.test_epoch_auc)]
+        auroc_table = wandb.Table(data=auroc, columns=["epoch", "test_auc"])
+        acc = [[epoch, value] for (epoch, value) in zip(self.epoch_names, self.test_epoch_acc)]
+        acc_table = wandb.Table(data=acc, columns=["epoch", "test_acc"])
+        wandb.log({"test_acc_table": acc_table})
+        f1 = [[epoch, value] for (epoch, value) in zip(self.epoch_names, self.test_epoch_f1)]
+        f1_table = wandb.Table(data=f1, columns=["epoch", "test_f1"])
+        wandb.log({"test_f1_table": f1_table})
         wandb.log({
-            "test_auc_per_epoch": wandb.plot.line(table, "epoch", "test_auc", title="AUROC at 6h Epochs")
+            "test_auc_per_epoch": wandb.plot.line(auroc_table, "epoch", "test_auc", title="AUROC at 6h Epochs")
+        })
+        # Plot the predicted probability for each epoch
+        pred_probs = [[epoch, prob] for epoch, prob in zip(self.epoch_names, self.test_pred_probs)]
+        table_probs = wandb.Table(data=pred_probs, columns=["epoch", "predicted_probability"])
+        wandb.log({
+            "predicted_prob_per_epoch": wandb.plot.line(table_probs, 
+                                                        "epoch", 
+                                                        "predicted_probability", 
+                                                        title="Predicted Probability at 6h Epochs")
         })
 
     def configure_optimizers(self):

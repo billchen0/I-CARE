@@ -9,7 +9,7 @@ NUM_EPOCHS = 100
 # ! change
 PROJECT_NAME = "icare-final"
 # ! change
-MODEL_NAME = "transformer"
+MODEL_NAME = "final-bilstm"
 # ! change
 FEATURES = "ae"
 BEST_MODEL_NAME = f"best-{MODEL_NAME}-{FEATURES}"
