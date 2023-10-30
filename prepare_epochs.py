@@ -1,11 +1,11 @@
 from pathlib import Path
 import numpy as np
 
-NUM_FEATURES = 144
+NUM_FEATURES = 296
 HOUR_INDEX = 1
-RAW_FEATURE_PATH = Path("/media/hdd1/i-care/agg-ae-features")
-SAVE_PATH_ROOT = Path("/media/hdd1/i-care/6h-ae")
-TRNASPOSE = True
+RAW_FEATURE_PATH = Path("/media/hdd1/i-care/combined-features")
+SAVE_PATH_ROOT = Path("/media/hdd1/i-care/6h-combined")
+TRNASPOSE = False
 
 
 def get_unique_hour_files(path):

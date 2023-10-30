@@ -9,9 +9,9 @@ parameters:
   nhead:
     values: [2, 4, 8]
   num_layers:
-    values: [2, 4, 6, 8, 10]
+    values: [2, 6, 10]
   dropout: 
-    values: [0.1, 0.2, 0.3, 0.4, 0.5]
+    values: [0.1, 0.3, 0.5]
 command:
   - python
   - /home/bc299/icare/classifier/train.py
