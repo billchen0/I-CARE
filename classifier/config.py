@@ -1,15 +1,20 @@
 # Training Hyperparameters
 BATCH_SIZE = 128
-INPUT_SIZE = 14
+# ! change
+INPUT_SIZE = 144
 LEARNING_RATE = 1e-4
 NUM_EPOCHS = 100
 
 # Logger
-PROJECT_NAME = "icare"
-MODEL_NAME = "transformer"
-FEATURES = "eeg+ecg"
-BEST_MODEL_NAME = "best-transformer-eeg+ecg"
+# ! change
+PROJECT_NAME = "icare-final"
+# ! change
+MODEL_NAME = "final-bilstm"
+# ! change
+FEATURES = "ae"
+BEST_MODEL_NAME = f"best-{MODEL_NAME}-{FEATURES}"
 
 # Dataset
-DATA_DIR = "/media/nvme1/icare-data/6h-combined"
+# ! change
+DATA_DIR = "/media/hdd1/i-care/6h-ae"
 LABEL_DIR = "/home/bc299/icare/artifacts/patient_data.csv"

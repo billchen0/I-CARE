@@ -1,17 +1,17 @@
 name: transformer-grid-sweep
 method: grid
-metric: 
+metric:
   goal: minimize
   name: val_loss
 parameters:
   d_model:
-    values: [64, 128, 256]
+    values: [128]
   nhead:
-    values: [2, 4, 8]
+    values: [8]
   num_layers:
-    values: [2, 4, 6, 8, 10]
+    values: [8]
   dropout: 
-    values: [0.1, 0.2, 0.3, 0.4, 0.5]
+    values: [0.3]
 command:
   - python
   - /home/bc299/icare/classifier/train.py
